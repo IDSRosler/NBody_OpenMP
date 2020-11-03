@@ -51,20 +51,24 @@ void nbody(Particle* d_particles, Particle *output) {
 {
     #pragma omp for
     for(int id=0; id<number_of_particles; id++) {
-        Particle* this_particle = &output[id];
+        Particle *this_particle = &output[id];
 
         float force_x = 0.0f, force_y = 0.0f, force_z = 0.0f;
         float total_force_x = 0.0f, total_force_y = 0.0f, total_force_z = 0.0f;
 
         int i;
 
-        for(i = 0; i < number_of_particles; i++) {
-            if(i != id) {
-                calculate_force(d_particles + id, d_particles + i, &force_x, &force_y, &force_z);
+        #pragma omp parallel reduction(+:total_force_x) reduction(+:total_force_y) reduction(+:total_force_z)
+        {
+            #pragma omp for private(force_x) private(force_y) private(force_z)
+            for (i = 0; i < number_of_particles; i++) {
+                if (i != id) {
+                    calculate_force(d_particles + id, d_particles + i, &force_x, &force_y, &force_z);
 
-                total_force_x += force_x;
-                total_force_y += force_y;
-                total_force_z += force_z;
+                    total_force_x += force_x;
+                    total_force_y += force_y;
+                    total_force_z += force_z;
+                }
             }
         }
 
